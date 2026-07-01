@@ -1,0 +1,98 @@
+/* Loaded client-side via CSS @import (not next/font) so the production build never
+   depends on reaching fonts.googleapis.com at build time. Falls back gracefully via
+   the font stacks below if this request is blocked (e.g. offline demo environment).
+   Must precede the Tailwind import per CSS @import ordering rules. */
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
+@import "tailwindcss";
+
+/*
+  Kavach design tokens.
+  Direction: dark ops/security console. The subject is a live fraud-detection
+  instrument, not a marketing site — so the palette leans toward instrumentation
+  (near-black panels, hairline borders, a single alert-red accent for danger,
+  emerald for "clear") rather than a generic SaaS blue-and-white dashboard.
+*/
+:root {
+  --bg-canvas: #0a0d12;
+  --bg-panel: #12161f;
+  --bg-panel-raised: #171c27;
+  --border-hairline: #232a38;
+  --border-hairline-strong: #2f3847;
+
+  --text-primary: #e8eaed;
+  --text-secondary: #9aa4b5;
+  --text-muted: #656f81;
+
+  --accent-brand: #6c8eff;
+  --accent-brand-dim: #3a4a80;
+  --accent-danger: #ff5a5f;
+  --accent-danger-dim: #4a2226;
+  --accent-safe: #34d399;
+  --accent-safe-dim: #1b3a30;
+  --accent-warn: #f5a623;
+
+  --font-display: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+@theme inline {
+  --color-canvas: var(--bg-canvas);
+  --color-panel: var(--bg-panel);
+  --color-panel-raised: var(--bg-panel-raised);
+  --color-hairline: var(--border-hairline);
+  --color-hairline-strong: var(--border-hairline-strong);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-brand: var(--accent-brand);
+  --color-brand-dim: var(--accent-brand-dim);
+  --color-danger: var(--accent-danger);
+  --color-danger-dim: var(--accent-danger-dim);
+  --color-safe: var(--accent-safe);
+  --color-safe-dim: var(--accent-safe-dim);
+  --color-warn: var(--accent-warn);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+}
+
+* {
+  border-color: var(--border-hairline);
+}
+
+body {
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  background-image:
+    radial-gradient(circle at 15% 0%, rgba(108, 142, 255, 0.06), transparent 40%),
+    radial-gradient(circle at 85% 100%, rgba(255, 90, 95, 0.05), transparent 40%);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: var(--accent-brand-dim);
+  color: var(--text-primary);
+}
+
+/* subtle scanning pulse used on flagged / newly-injected graph nodes */
+@keyframes pulse-danger {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 90, 95, 0.5); }
+  50% { box-shadow: 0 0 0 6px rgba(255, 90, 95, 0); }
+}
+.pulse-danger {
+  animation: pulse-danger 1.8s ease-in-out infinite;
+}
+
+@keyframes fade-in-down {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-down {
+  animation: fade-in-down 0.35s ease-out;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-hairline-strong); border-radius: 4px; }
