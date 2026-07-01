@@ -1,0 +1,12 @@
+# OS and IDE files
+.DS_Store
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Hackathon specific
+implementation.md
