@@ -8,6 +8,7 @@ import { detectFraudRings } from "./detection.js";
 import { injectFraudRing } from "./inject.js";
 import { getGraphData, getRings, getStats } from "./graph.js";
 import { runBenchmark } from "./benchmark.js";
+import { findPath } from "./path.js";
 import { getDriver } from "./db.js";
 
 const app = express();
@@ -56,6 +57,19 @@ app.get("/api/rings", async (_req, res) => {
 app.get("/api/benchmark", async (_req, res) => {
   try {
     res.json(await runBenchmark());
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/path", async (req, res) => {
+  try {
+    const from = String(req.query.from ?? "");
+    const to = String(req.query.to ?? "");
+    const mode = req.query.mode === "infra" ? "infra" : "all";
+    if (!from || !to) return res.status(400).json({ error: "from and to query params required" });
+    res.json(await findPath(from, to, mode));
   } catch (err: any) {
     console.error(err);
     res.status(500).json({ error: err.message });

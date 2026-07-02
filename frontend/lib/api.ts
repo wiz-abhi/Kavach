@@ -71,6 +71,16 @@ export type Benchmark = {
   note: string;
 };
 
+export type PathResult = {
+  found: boolean;
+  from: string;
+  to: string;
+  hops?: number;
+  nodeIds?: string[];
+  readable?: string[];
+  message?: string;
+};
+
 async function req<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     headers: { "Content-Type": "application/json" },
@@ -89,6 +99,8 @@ export const api = {
   graph: (limit = 600) => req<GraphData>(`/api/graph?limit=${limit}`),
   rings: () => req<Ring[]>("/api/rings"),
   benchmark: () => req<Benchmark>("/api/benchmark"),
+  path: (from: string, to: string, mode: "all" | "infra" = "infra") =>
+    req<PathResult>(`/api/path?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&mode=${mode}`),
   detect: () => req<DetectionResult>("/api/detect", { method: "POST" }),
   injectFraudRing: (size = 6) =>
     req<{ injected: boolean; accountIds: string[] }>("/api/inject-fraud-ring", {

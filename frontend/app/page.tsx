@@ -10,6 +10,7 @@ import { RingsPanel } from "@/components/RingsPanel";
 import { GraphView } from "@/components/GraphView";
 import { NodeDetail } from "@/components/NodeDetail";
 import { BenchmarkModal } from "@/components/BenchmarkModal";
+import { InvestigateModal } from "@/components/InvestigateModal";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -19,6 +20,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showBenchmark, setShowBenchmark] = useState(false);
+  const [showInvestigate, setShowInvestigate] = useState(false);
 
   const refreshAll = useCallback(async () => {
     try {
@@ -80,6 +82,12 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-3">
           <button
+            onClick={() => setShowInvestigate(true)}
+            className="px-4 py-2 rounded-md border border-[var(--border-hairline-strong)] bg-[var(--bg-panel-raised)] text-[var(--text-secondary)] text-sm font-medium hover:text-[var(--text-primary)] hover:border-[var(--accent-brand)]/40 transition-colors"
+          >
+            Investigate
+          </button>
+          <button
             onClick={() => setShowBenchmark(true)}
             className="px-4 py-2 rounded-md border border-[var(--border-hairline-strong)] bg-[var(--bg-panel-raised)] text-[var(--text-secondary)] text-sm font-medium hover:text-[var(--text-primary)] hover:border-[var(--accent-brand)]/40 transition-colors"
           >
@@ -90,6 +98,7 @@ export default function DashboardPage() {
       </header>
 
       {showBenchmark && <BenchmarkModal onClose={() => setShowBenchmark(false)} />}
+      {showInvestigate && <InvestigateModal onClose={() => setShowInvestigate(false)} />}
 
       {error && (
         <div className="mx-6 mt-4 rounded-md border border-[var(--accent-danger)]/40 bg-[var(--accent-danger-dim)]/50 px-4 py-3 text-sm text-[var(--accent-danger)]">
