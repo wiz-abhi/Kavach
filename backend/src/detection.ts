@@ -47,6 +47,12 @@ export async function detectFraudRings() {
   const session = driver.session();
 
   try {
+    // 0. Clear previous detection state so each run reflects the CURRENT graph, not an
+    //    accumulation of every past run (Ring ids are timestamped, so without this,
+    //    clicking "Run Detection" repeatedly would pile up duplicate Ring nodes).
+    await session.run(`MATCH (r:Ring) DETACH DELETE r`);
+    await session.run(`MATCH (a:Account) WHERE a.flagged IS NOT NULL REMOVE a.flagged`);
+
     // 1. Find all account pairs that share a device, IP, or phone number.
     const sharedResult = await session.run(`
       MATCH (a1:Account)-[r1:USED_DEVICE|USED_IP|REGISTERED_WITH]->(attr)<-[r2:USED_DEVICE|USED_IP|REGISTERED_WITH]-(a2:Account)
@@ -89,7 +95,13 @@ export async function detectFraudRings() {
     const totalTx = baselineResult.records[0].get("totalTx").toNumber();
     const accountCountResult = await session.run(`MATCH (a:Account) RETURN count(a) AS c`);
     const totalAccounts = accountCountResult.records[0].get("c").toNumber();
-    const baselineTxPerAccount = totalAccounts > 0 ? totalTx / totalAccounts : 0;
+
+    // Graph-wide "random" transaction edge density: of all possible directed account
+    // pairs, what fraction actually transact. A genuine fraud ring transacts with itself
+    // *far* more densely than this baseline — that multiplier is the core anomaly signal,
+    // and unlike a per-account average it does not get diluted as the ring grows.
+    const possibleGraphEdges = totalAccounts > 1 ? totalAccounts * (totalAccounts - 1) : 1;
+    const graphEdgeDensity = totalTx / possibleGraphEdges;
 
     const rings: any[] = [];
     let ringIndex = 0;
@@ -128,29 +140,38 @@ export async function detectFraudRings() {
         accountCount: r.get("accountCount").toNumber(),
       }));
 
-      const internalDensity = internalTx / memberIds.length;
-      const densityRatio = baselineTxPerAccount > 0 ? internalDensity / baselineTxPerAccount : internalDensity;
+      // Internal transaction edge density vs. the graph's random baseline. Dividing by the
+      // number of *possible* internal pairs (not by ring size) means a large ring is not
+      // unfairly penalised — a 9-account ring and a 6-account ring that are equally "tight"
+      // score the same multiplier.
+      const size = memberIds.length;
+      const clusterEdgeDensity = size > 1 ? internalTx / (size * (size - 1)) : 0;
+      const densityMultiplier = graphEdgeDensity > 0 ? clusterEdgeDensity / graphEdgeDensity : 0;
 
-      // simple confidence heuristic: weighted combination of shared-attribute reuse and tx density
+      // Two independent fraud signals, both required:
+      //   1. Shared infrastructure beyond innocent coincidence (maxAttrReuse >= 3).
+      //      Innocent family/device-sharing noise only ever links 2 accounts, so a device/
+      //      IP/phone reused across 3+ accounts is a real signal, not chance.
+      //   2. Anomalous internal transaction density (densityMultiplier >= 5): the cluster
+      //      transacts with itself many times more densely than a random set of accounts.
       const maxAttrReuse = Math.max(0, ...sharedAttrs.map((a) => a.accountCount));
-      const confidence = Math.min(
-        1,
-        0.15 * Math.min(maxAttrReuse, 10) / 10 * 5 + 0.5 * Math.min(densityRatio / 5, 1) + (sharedAttrs.length > 0 ? 0.2 : 0)
-      );
 
-      // only call it a "ring" if there's real signal: multiple accounts genuinely reusing
-      // infrastructure AND transacting well above baseline density with each other
-      if (maxAttrReuse >= 2 && densityRatio > 1.5) {
+      // Confidence blends the two signals (each saturates at a "clearly fraud" level).
+      const attrSignal = Math.min(maxAttrReuse / 6, 1);
+      const densitySignal = Math.min(densityMultiplier / 50, 1);
+      const confidence = Math.min(1, 0.5 * attrSignal + 0.5 * densitySignal);
+
+      if (maxAttrReuse >= 3 && densityMultiplier >= 5 && internalTx >= 5) {
         rings.push({
           ring_id: `RING-${Date.now()}-${ringIndex}`,
           member_ids: memberIds,
-          size: memberIds.length,
+          size,
           shared_attributes: sharedAttrs,
           internal_transactions: internalTx,
           internal_transaction_volume: totalAmount,
-          density_ratio: Number(densityRatio.toFixed(2)),
+          density_ratio: Number(densityMultiplier.toFixed(1)),
           confidence_score: Number(confidence.toFixed(2)),
-          explanation: buildExplanation(memberIds.length, sharedAttrs, densityRatio, totalAmount),
+          explanation: buildExplanation(size, sharedAttrs, densityMultiplier, totalAmount),
         });
       }
     }
@@ -207,7 +228,7 @@ function buildExplanation(
   return (
     `${size} accounts form a tightly connected cluster sharing ${deviceCount} device(s) and ${ipCount} IP address(es), ` +
     `with one ${attrLabel} reused across ${reuseCount} accounts. ` +
-    `Internal transaction activity between these accounts is ${densityRatio.toFixed(1)}x higher than the network average ` +
+    `These accounts transact with each other ${Math.round(densityRatio)}x more densely than a random set of accounts in the network ` +
     `(₹${Math.round(totalAmount).toLocaleString("en-IN")} moved within the cluster), consistent with a coordinated fraud ring.`
   );
 }

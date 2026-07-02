@@ -1,3 +1,4 @@
+import neo4j from "neo4j-driver";
 import { getDriver } from "./db.js";
 
 /**
@@ -19,7 +20,7 @@ export async function getGraphData(limit: number = 600) {
              collect(DISTINCT d.id) AS devices, collect(DISTINCT ip.id) AS ips
       LIMIT $limit
     `,
-      { limit }
+      { limit: neo4j.int(limit) }
     );
 
     const nodes = nodesResult.records.map((r) => ({
@@ -40,7 +41,7 @@ export async function getGraphData(limit: number = 600) {
       RETURN a.id AS source, b.id AS target, t.amount AS amount
       LIMIT $limit
     `,
-      { limit: limit * 3 }
+      { limit: neo4j.int(limit * 3) }
     );
 
     const edges = edgesResult.records
@@ -80,14 +81,13 @@ export async function getStats() {
   const driver = getDriver();
   const session = driver.session();
   try {
+    // Use COUNT{} subqueries so the separate counts don't form a Cartesian product
+    // (which would multiply rows and wildly inflate the flagged-account sum).
     const result = await session.run(`
-      MATCH (a:Account)
-      OPTIONAL MATCH ()-[t:TRANSACTED_WITH]->()
-      OPTIONAL MATCH (r:Ring)
-      RETURN count(DISTINCT a) AS accounts,
-             count(DISTINCT t) AS transactions,
-             count(DISTINCT r) AS rings,
-             sum(CASE WHEN a.flagged THEN 1 ELSE 0 END) AS flaggedAccounts
+      RETURN COUNT { (a:Account) } AS accounts,
+             COUNT { ()-[:TRANSACTED_WITH]->() } AS transactions,
+             COUNT { (:Ring) } AS rings,
+             COUNT { (a:Account) WHERE a.flagged = true } AS flaggedAccounts
     `);
     const rec = result.records[0];
     return {

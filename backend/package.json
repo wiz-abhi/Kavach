@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts"
+    "start": "tsx src/index.ts",
+    "reset": "tsx src/reset.ts",
+    "validate": "tsx src/validate.ts"
   },
   "dependencies": {
     "express": "^4.21.1",
