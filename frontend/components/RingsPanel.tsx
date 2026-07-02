@@ -2,6 +2,25 @@
 
 import type { Ring } from "@/lib/api";
 
+function exportCase(ring: Ring) {
+  const caseFile = {
+    case_id: ring.id,
+    generated_at: new Date().toISOString(),
+    confidence: ring.confidence,
+    member_count: ring.size,
+    member_accounts: ring.member_ids,
+    finding: ring.explanation,
+    tool: "Kavach — graph-native fraud ring detection",
+  };
+  const blob = new Blob([JSON.stringify(caseFile, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `case-${ring.id}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function RingsPanel({
   rings,
   onSelectRing,
@@ -28,10 +47,10 @@ export function RingsPanel({
           </div>
         )}
         {rings.map((ring) => (
-          <button
+          <div
             key={ring.id}
             onClick={() => onSelectRing?.(ring)}
-            className={`text-left rounded-md border transition-colors p-3 flex flex-col gap-2 ${
+            className={`cursor-pointer rounded-md border transition-colors p-3 flex flex-col gap-2 ${
               selectedRingId === ring.id
                 ? "border-[var(--accent-danger)] bg-[var(--accent-danger-dim)]/80 ring-1 ring-[var(--accent-danger)]/40"
                 : "border-[var(--accent-danger)]/25 bg-[var(--accent-danger-dim)]/40 hover:bg-[var(--accent-danger-dim)]/70"
@@ -43,11 +62,18 @@ export function RingsPanel({
                 {(ring.confidence * 100).toFixed(0)}% confidence
               </span>
             </div>
-            <div className="text-xs text-[var(--text-secondary)]">
-              {ring.size} accounts flagged
-            </div>
+            <div className="text-xs text-[var(--text-secondary)]">{ring.size} accounts flagged</div>
             <p className="text-xs text-[var(--text-primary)]/85 leading-relaxed">{ring.explanation}</p>
-          </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                exportCase(ring);
+              }}
+              className="self-start mt-1 text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--accent-brand)] border border-[var(--border-hairline)] rounded px-2 py-1 transition-colors"
+            >
+              ⤓ Export case
+            </button>
+          </div>
         ))}
       </div>
     </div>

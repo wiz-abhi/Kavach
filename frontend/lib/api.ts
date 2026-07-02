@@ -91,6 +91,19 @@ export type AskResult = {
   source: "llm" | "rules";
 };
 
+export type AccountRisk = {
+  id: string;
+  name: string;
+  city: string;
+  flagged: boolean;
+  sharedLinks: number;
+  txCount: number;
+  flaggedTx: number;
+  risk: number;
+  band: "low" | "medium" | "high";
+  factors: string[];
+};
+
 async function req<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     headers: { "Content-Type": "application/json" },
@@ -113,6 +126,7 @@ export const api = {
     req<PathResult>(`/api/path?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&mode=${mode}`),
   ask: (question: string) =>
     req<AskResult>("/api/ask", { method: "POST", body: JSON.stringify({ question }) }),
+  account: (id: string) => req<AccountRisk>(`/api/account/${encodeURIComponent(id)}`),
   detect: () => req<DetectionResult>("/api/detect", { method: "POST" }),
   injectFraudRing: (size = 6) =>
     req<{ injected: boolean; accountIds: string[] }>("/api/inject-fraud-ring", {

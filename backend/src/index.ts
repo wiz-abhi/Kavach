@@ -11,6 +11,7 @@ import { runBenchmark } from "./benchmark.js";
 import { findPath } from "./path.js";
 import { loadFeedSample, nextFeedTx } from "./feed.js";
 import { ask } from "./copilot.js";
+import { getAccountRisk } from "./account.js";
 import { getDriver } from "./db.js";
 
 const app = express();
@@ -70,6 +71,17 @@ app.post("/api/ask", async (req, res) => {
     const question = String(req.body?.question ?? "");
     if (!question.trim()) return res.status(400).json({ error: "question required" });
     res.json(await ask(question));
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/account/:id", async (req, res) => {
+  try {
+    const result = await getAccountRisk(String(req.params.id));
+    if (!result) return res.status(404).json({ error: "account not found" });
+    res.json(result);
   } catch (err: any) {
     console.error(err);
     res.status(500).json({ error: err.message });
