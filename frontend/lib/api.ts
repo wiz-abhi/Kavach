@@ -47,6 +47,30 @@ export type DetectionResult = {
   message?: string;
 };
 
+export type BenchQuery = {
+  engine: string;
+  ms: number;
+  wallMs?: number;
+  rows?: number;
+  reached?: number;
+  lines: number;
+  query: string;
+};
+
+export type Benchmark = {
+  question: string;
+  cypher: BenchQuery;
+  sql: BenchQuery;
+  transitive: {
+    question: string;
+    seed: string;
+    cypher: BenchQuery;
+    sql: BenchQuery;
+    match: boolean;
+  };
+  note: string;
+};
+
 async function req<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     headers: { "Content-Type": "application/json" },
@@ -64,6 +88,7 @@ export const api = {
   stats: () => req<Stats>("/api/stats"),
   graph: (limit = 600) => req<GraphData>(`/api/graph?limit=${limit}`),
   rings: () => req<Ring[]>("/api/rings"),
+  benchmark: () => req<Benchmark>("/api/benchmark"),
   detect: () => req<DetectionResult>("/api/detect", { method: "POST" }),
   injectFraudRing: (size = 6) =>
     req<{ injected: boolean; accountIds: string[] }>("/api/inject-fraud-ring", {

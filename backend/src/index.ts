@@ -7,6 +7,7 @@ import "dotenv/config";
 import { detectFraudRings } from "./detection.js";
 import { injectFraudRing } from "./inject.js";
 import { getGraphData, getRings, getStats } from "./graph.js";
+import { runBenchmark } from "./benchmark.js";
 import { getDriver } from "./db.js";
 
 const app = express();
@@ -46,6 +47,15 @@ app.get("/api/graph", async (req, res) => {
 app.get("/api/rings", async (_req, res) => {
   try {
     res.json(await getRings());
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/benchmark", async (_req, res) => {
+  try {
+    res.json(await runBenchmark());
   } catch (err: any) {
     console.error(err);
     res.status(500).json({ error: err.message });

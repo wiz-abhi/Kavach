@@ -9,6 +9,7 @@ import { Controls } from "@/components/Controls";
 import { RingsPanel } from "@/components/RingsPanel";
 import { GraphView } from "@/components/GraphView";
 import { NodeDetail } from "@/components/NodeDetail";
+import { BenchmarkModal } from "@/components/BenchmarkModal";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -17,6 +18,7 @@ export default function DashboardPage() {
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showBenchmark, setShowBenchmark] = useState(false);
 
   const refreshAll = useCallback(async () => {
     try {
@@ -76,8 +78,18 @@ export default function DashboardPage() {
             </p>
           </div>
         </div>
-        <Controls onDetect={handleDetect} onInject={handleInject} />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowBenchmark(true)}
+            className="px-4 py-2 rounded-md border border-[var(--border-hairline-strong)] bg-[var(--bg-panel-raised)] text-[var(--text-secondary)] text-sm font-medium hover:text-[var(--text-primary)] hover:border-[var(--accent-brand)]/40 transition-colors"
+          >
+            Why Graph?
+          </button>
+          <Controls onDetect={handleDetect} onInject={handleInject} />
+        </div>
       </header>
+
+      {showBenchmark && <BenchmarkModal onClose={() => setShowBenchmark(false)} />}
 
       {error && (
         <div className="mx-6 mt-4 rounded-md border border-[var(--accent-danger)]/40 bg-[var(--accent-danger-dim)]/50 px-4 py-3 text-sm text-[var(--accent-danger)]">
