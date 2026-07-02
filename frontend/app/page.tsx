@@ -18,6 +18,7 @@ export default function DashboardPage() {
   const [graph, setGraph] = useState<GraphData>({ nodes: [], edges: [] });
   const [rings, setRings] = useState<Ring[]>([]);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+  const [selectedRing, setSelectedRing] = useState<Ring | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showBenchmark, setShowBenchmark] = useState(false);
@@ -137,14 +138,14 @@ export default function DashboardPage() {
                 Loading graph…
               </div>
             ) : (
-              <GraphView data={graph} onSelectNode={setSelectedNode} />
+              <GraphView data={graph} onSelectNode={setSelectedNode} highlightIds={selectedRing?.member_ids} />
             )}
           </div>
           {selectedNode && <NodeDetail node={selectedNode} onClose={() => setSelectedNode(null)} />}
         </div>
 
         <div className="order-3">
-          <RingsPanel rings={rings} />
+          <RingsPanel rings={rings} onSelectRing={setSelectedRing} selectedRingId={selectedRing?.id} />
         </div>
       </div>
     </main>

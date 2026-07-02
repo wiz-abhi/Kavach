@@ -2,7 +2,15 @@
 
 import type { Ring } from "@/lib/api";
 
-export function RingsPanel({ rings, onSelectRing }: { rings: Ring[]; onSelectRing?: (ring: Ring) => void }) {
+export function RingsPanel({
+  rings,
+  onSelectRing,
+  selectedRingId,
+}: {
+  rings: Ring[];
+  onSelectRing?: (ring: Ring) => void;
+  selectedRingId?: string;
+}) {
   return (
     <div className="rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-panel)] flex flex-col h-full">
       <div className="px-4 py-3 border-b border-[var(--border-hairline)] flex items-center justify-between">
@@ -23,7 +31,11 @@ export function RingsPanel({ rings, onSelectRing }: { rings: Ring[]; onSelectRin
           <button
             key={ring.id}
             onClick={() => onSelectRing?.(ring)}
-            className="text-left rounded-md border border-[var(--accent-danger)]/25 bg-[var(--accent-danger-dim)]/40 hover:bg-[var(--accent-danger-dim)]/70 transition-colors p-3 flex flex-col gap-2"
+            className={`text-left rounded-md border transition-colors p-3 flex flex-col gap-2 ${
+              selectedRingId === ring.id
+                ? "border-[var(--accent-danger)] bg-[var(--accent-danger-dim)]/80 ring-1 ring-[var(--accent-danger)]/40"
+                : "border-[var(--accent-danger)]/25 bg-[var(--accent-danger-dim)]/40 hover:bg-[var(--accent-danger-dim)]/70"
+            }`}
           >
             <div className="flex items-center justify-between">
               <span className="font-mono text-xs text-[var(--accent-danger)]">{ring.id}</span>
