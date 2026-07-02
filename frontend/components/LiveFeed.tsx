@@ -2,18 +2,24 @@
 
 import type { LiveEvent } from "@/lib/useLiveFeed";
 
-function describeEvent(evt: LiveEvent): { text: string; tone: "default" | "danger" | "safe" } {
+function inr(n: number): string {
+  return `₹${Math.round(n).toLocaleString("en-IN")}`;
+}
+
+function describeEvent(evt: LiveEvent): { text: string; tone: "default" | "danger" | "safe" | "warn" } | null {
   switch (evt.type) {
     case "connected":
       return { text: "Connected to live feed", tone: "safe" };
-    case "stats_update":
+    case "transaction": {
+      const p = evt.payload ?? {};
       return {
-        text: `Heartbeat — ${evt.payload?.accounts ?? "?"} accounts, ${evt.payload?.transactions ?? "?"} transactions tracked`,
-        tone: "default",
+        text: `${p.from} → ${p.to}  ${inr(p.amount ?? 0)}`,
+        tone: p.highValue ? "warn" : "default",
       };
+    }
     case "ring_injected":
       return {
-        text: `New cluster formed: ${evt.payload?.accountIds?.length ?? "?"} accounts sharing infrastructure`,
+        text: `⚠ New cluster formed: ${evt.payload?.accountIds?.length ?? "?"} accounts sharing infrastructure`,
         tone: "danger",
       };
     case "detection_complete":
@@ -21,8 +27,10 @@ function describeEvent(evt: LiveEvent): { text: string; tone: "default" | "dange
         text: `Detection run complete — ${evt.payload?.rings?.length ?? 0} ring(s) flagged`,
         tone: evt.payload?.rings?.length ? "danger" : "safe",
       };
+    case "stats_update":
+      return null; // used only to refresh counters, not shown in the feed
     default:
-      return { text: evt.type, tone: "default" };
+      return null;
   }
 }
 
@@ -45,13 +53,27 @@ export function LiveFeed({ events, connected }: { events: LiveEvent[]; connected
           <p className="text-xs text-[var(--text-muted)]">Waiting for activity…</p>
         )}
         {[...events].reverse().map((evt, i) => {
-          const { text, tone } = describeEvent(evt);
+          const described = describeEvent(evt);
+          if (!described) return null;
+          const { text, tone } = described;
           const dotColor =
-            tone === "danger" ? "bg-[var(--accent-danger)]" : tone === "safe" ? "bg-[var(--accent-safe)]" : "bg-[var(--text-muted)]";
+            tone === "danger"
+              ? "bg-[var(--accent-danger)]"
+              : tone === "safe"
+              ? "bg-[var(--accent-safe)]"
+              : tone === "warn"
+              ? "bg-[var(--accent-warn)]"
+              : "bg-[var(--text-muted)]";
+          const textColor =
+            tone === "danger"
+              ? "text-[var(--accent-danger)]"
+              : tone === "warn"
+              ? "text-[var(--accent-warn)]"
+              : "text-[var(--text-secondary)]";
           return (
-            <div key={i} className="flex items-start gap-2 text-xs font-mono animate-fade-in-down">
+            <div key={`${evt.timestamp}-${i}`} className="flex items-start gap-2 text-xs font-mono animate-fade-in-down">
               <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`} />
-              <span className="text-[var(--text-secondary)] leading-relaxed">{text}</span>
+              <span className={`leading-relaxed ${textColor}`}>{text}</span>
             </div>
           );
         })}

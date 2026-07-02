@@ -9,6 +9,7 @@ import { injectFraudRing } from "./inject.js";
 import { getGraphData, getRings, getStats } from "./graph.js";
 import { runBenchmark } from "./benchmark.js";
 import { findPath } from "./path.js";
+import { loadFeedSample, nextFeedTx } from "./feed.js";
 import { getDriver } from "./db.js";
 
 const app = express();
@@ -92,6 +93,7 @@ app.post("/api/inject-fraud-ring", async (req, res) => {
     const size = req.body?.size ?? 6;
     const result = await injectFraudRing(size);
     broadcast({ type: "ring_injected", payload: result });
+    loadFeedSample().catch(() => {}); // refresh stream to include the new accounts
     res.json(result);
   } catch (err: any) {
     console.error(err);
@@ -116,18 +118,28 @@ wss.on("connection", (ws) => {
   ws.on("close", () => console.log("WS client disconnected"));
 });
 
-// Periodically push a lightweight "heartbeat" with fresh stats so the frontend feed
-// feels alive even without new transactions being created server-side.
+// Stream real transactions from the graph as a live activity feed (~1.4s cadence).
+setInterval(() => {
+  const tx = nextFeedTx();
+  if (tx) broadcast({ type: "transaction", payload: tx });
+}, 1400);
+
+// Less frequent stats refresh so the counters stay accurate without spamming the feed.
 setInterval(async () => {
   try {
-    const stats = await getStats();
-    broadcast({ type: "stats_update", payload: stats });
+    broadcast({ type: "stats_update", payload: await getStats() });
   } catch {
     // swallow — don't crash the interval loop on transient errors
   }
-}, 5000);
+}, 6000);
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`Kavach backend listening on http://localhost:${PORT}`);
   console.log(`WebSocket live feed at ws://localhost:${PORT}/api/live-feed`);
+  try {
+    await loadFeedSample();
+    console.log("Live feed sample loaded.");
+  } catch (err: any) {
+    console.error("Could not load feed sample:", err.message);
+  }
 });
