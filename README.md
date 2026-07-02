@@ -1,5 +1,11 @@
 # Kavach — Real-Time Fraud Ring Detection
 
+**▶ Live demo: https://kavach-woad-beta.vercel.app** &nbsp;·&nbsp; [Backend health](https://kavach-backend-saqc.onrender.com/api/health) &nbsp;·&nbsp; [Pitch deck](docs/Kavach-Pitch-Deck.pptx)
+
+> The backend runs on Render's free tier and sleeps after ~15 min idle. If the dashboard looks
+> disconnected on first load, open the [health URL](https://kavach-backend-saqc.onrender.com/api/health)
+> once to wake it (~30–50s), then refresh — the live feed will reconnect automatically.
+
 **Banks flag fraud one account at a time. Real fraud works in rings.**
 
 Kavach models accounts, devices, IPs, and phone numbers as a **graph in Neo4j AuraDB** and
