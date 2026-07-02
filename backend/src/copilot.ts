@@ -34,9 +34,17 @@ export async function ask(question: string) {
   let cypher: string;
   let source: "llm" | "rules";
 
-  if (process.env.ANTHROPIC_API_KEY) {
-    cypher = await llmToCypher(q);
-    source = "llm";
+  const key = process.env.ANTHROPIC_API_KEY?.trim();
+  if (key) {
+    try {
+      cypher = await llmToCypher(q);
+      source = "llm";
+    } catch {
+      // LLM unavailable or misconfigured (bad key, rate limit, network) -> never break the
+      // demo; fall back to the deterministic rule-based translator.
+      cypher = rulesToCypher(q);
+      source = "rules";
+    }
   } else {
     cypher = rulesToCypher(q);
     source = "rules";
