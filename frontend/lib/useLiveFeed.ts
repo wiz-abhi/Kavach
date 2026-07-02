@@ -12,7 +12,12 @@ export function useLiveFeed(onMessage?: (event: LiveEvent) => void) {
   onMessageRef.current = onMessage;
 
   useEffect(() => {
-    const url = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:4000/api/live-feed";
+    // Prefer an explicit WS url, but fall back to deriving it from the API url so a
+    // missing/incorrect NEXT_PUBLIC_WS_URL (or an http->https mismatch) can't take the
+    // live feed offline. https://host -> wss://host, http://host -> ws://host.
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    const derived = apiUrl ? apiUrl.replace(/^http/, "ws") + "/api/live-feed" : null;
+    const url = process.env.NEXT_PUBLIC_WS_URL || derived || "ws://localhost:4000/api/live-feed";
     let ws: WebSocket;
     let reconnectTimer: ReturnType<typeof setTimeout>;
 

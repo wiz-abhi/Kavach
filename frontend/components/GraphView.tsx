@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { GraphData, GraphNode } from "@/lib/api";
 
@@ -17,7 +17,23 @@ export function GraphView({
   highlightIds?: string[];
 }) {
   const fgRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dims, setDims] = useState({ w: 0, h: 0 });
   const highlight = useMemo(() => new Set(highlightIds ?? []), [highlightIds]);
+
+  // react-force-graph defaults to WINDOW size when width/height aren't given, which
+  // overflows the panel and shoves the rest of the layout off-screen. Measure the
+  // container and pass explicit pixel dimensions instead.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const r = entries[0].contentRect;
+      setDims({ w: Math.floor(r.width), h: Math.floor(r.height) });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const graphData = useMemo(
     () => ({
@@ -42,7 +58,7 @@ export function GraphView({
   }, [highlight]);
 
   return (
-    <div className="rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-panel)] h-full overflow-hidden relative">
+    <div ref={containerRef} className="rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-panel)] h-full overflow-hidden relative">
       <div className="absolute top-3 left-4 z-10 flex items-center gap-4 text-xs font-mono">
         <span className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-[var(--accent-danger)]" /> Flagged
@@ -53,6 +69,8 @@ export function GraphView({
       </div>
       <ForceGraph2D
         ref={fgRef}
+        width={dims.w || undefined}
+        height={dims.h || undefined}
         graphData={graphData}
         backgroundColor="transparent"
         nodeId="id"
