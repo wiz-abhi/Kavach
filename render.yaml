@@ -1,0 +1,23 @@
+# Render Blueprint for the Kavach backend (Express + WebSocket).
+# In Render: New + -> Blueprint -> connect this repo. It reads this file, then
+# prompts for the secret env vars below (they are not stored in git).
+services:
+  - type: web
+    name: kavach-backend
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NEO4J_URI
+        sync: false
+      - key: NEO4J_USERNAME
+        sync: false
+      - key: NEO4J_PASSWORD
+        sync: false
+      # optional — enables the LLM copilot; falls back to rule-based if unset
+      - key: ANTHROPIC_API_KEY
+        sync: false
