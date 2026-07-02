@@ -81,6 +81,16 @@ export type PathResult = {
   message?: string;
 };
 
+export type AskResult = {
+  question: string;
+  cypher: string;
+  rows?: Record<string, any>[];
+  rowCount?: number;
+  answer?: string;
+  error?: string;
+  source: "llm" | "rules";
+};
+
 async function req<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     headers: { "Content-Type": "application/json" },
@@ -101,6 +111,8 @@ export const api = {
   benchmark: () => req<Benchmark>("/api/benchmark"),
   path: (from: string, to: string, mode: "all" | "infra" = "infra") =>
     req<PathResult>(`/api/path?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&mode=${mode}`),
+  ask: (question: string) =>
+    req<AskResult>("/api/ask", { method: "POST", body: JSON.stringify({ question }) }),
   detect: () => req<DetectionResult>("/api/detect", { method: "POST" }),
   injectFraudRing: (size = 6) =>
     req<{ injected: boolean; accountIds: string[] }>("/api/inject-fraud-ring", {

@@ -10,6 +10,7 @@ import { getGraphData, getRings, getStats } from "./graph.js";
 import { runBenchmark } from "./benchmark.js";
 import { findPath } from "./path.js";
 import { loadFeedSample, nextFeedTx } from "./feed.js";
+import { ask } from "./copilot.js";
 import { getDriver } from "./db.js";
 
 const app = express();
@@ -58,6 +59,17 @@ app.get("/api/rings", async (_req, res) => {
 app.get("/api/benchmark", async (_req, res) => {
   try {
     res.json(await runBenchmark());
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/ask", async (req, res) => {
+  try {
+    const question = String(req.body?.question ?? "");
+    if (!question.trim()) return res.status(400).json({ error: "question required" });
+    res.json(await ask(question));
   } catch (err: any) {
     console.error(err);
     res.status(500).json({ error: err.message });

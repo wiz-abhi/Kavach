@@ -9,6 +9,7 @@
     "validate": "tsx src/validate.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.109.1",
     "@faker-js/faker": "^9.0.3",
     "@types/sql.js": "^1.4.11",
     "cors": "^2.8.5",
