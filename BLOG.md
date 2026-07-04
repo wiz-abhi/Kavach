@@ -1,6 +1,25 @@
-# Building Kavach: catching fraud *rings*, not just fraudsters — with Neo4j
+---
+title: "Building Kavach: catching fraud rings, not just fraudsters — with Neo4j"
+published: false
+description: "A graph-native fraud-ring detection platform built on Neo4j AuraDB for HACKHAZARDS '26 — how I modeled fraud as a graph, hit 100% recall, and made the 'why graph?' case provable live."
+tags: neo4j, hackathon, webdev, typescript
+cover_image: ""
+---
 
-*My HACKHAZARDS '26 build submission — a graph-native fraud ring detection platform.*
+<!--
+PUBLISHING NOTES (delete this block before posting):
+- Platforms: Dev.to (reads the front-matter above), Hashnode, or Medium (paste body, set title/tags manually).
+- Set published: true on Dev.to when ready.
+- Add a cover image: a screenshot of the dashboard with rings lit up works great (put its URL in cover_image).
+- Replace the [SCREENSHOT: ...] placeholders with real images before posting.
+- This post is the HACKHAZARDS '26 build-submission article.
+-->
+
+**▶ Live demo:** https://kavach-woad-beta.vercel.app
+**💻 Code:** https://github.com/wiz-abhi/Kavach
+**🎥 Demo video:** _(add your YouTube link)_
+
+> **TL;DR** — Traditional fraud detection scores one account at a time and misses organized *rings*. I modeled accounts, devices, IPs, phones, and transactions as a graph in **Neo4j AuraDB**, detected rings as dense infrastructure-sharing clusters with native Cypher, and got **100% recall / 0 false positives** against ground truth. Then I made the "why a graph database?" argument *provable* by running the same query in Cypher vs. SQL, live.
 
 ---
 
@@ -13,6 +32,8 @@ That works for lone fraudsters. It completely misses the expensive kind of fraud
 And that pattern is exactly what a row-and-column database is worst at. "Which accounts are secretly connected, and how deep does the ring go?" becomes a nightmare of self-joins in SQL. But it's the single most natural thing in the world for a graph.
 
 So I built **Kavach** (Sanskrit for *shield*): model accounts, devices, IPs, phones and transactions as a graph in **Neo4j AuraDB**, then detect the rings as dense, infrastructure-sharing clusters — and explain *why* each one was flagged, in plain English.
+
+[SCREENSHOT: the dashboard after "Run Detection" — blue normal accounts with red glowing ring clusters]
 
 ## The core idea: shared infrastructure is an edge
 
@@ -51,6 +72,8 @@ Judges on a database track have heard "graph is better for this" a hundred times
 
 It displays them side by side and confirms the result sets match. On a single hop they're comparable — but the honest, interesting part is the *transitive* query ("trace the entire ring"): in Cypher it's one variable-length pattern; in SQL it's a recursive CTE that gets heavier with every hop. Same answer, very different query. That's the whole argument for a graph database, made concrete.
 
+[SCREENSHOT: the "Why Graph?" panel — Cypher vs SQL side by side with the parity badge]
+
 ## Two features that turn a red flag into an investigation
 
 Detecting a ring is step one. A real analyst needs to *act*.
@@ -66,6 +89,8 @@ Detecting a ring is step one. A real analyst needs to *act*.
 
 ## Try it
 
-Kavach runs entirely on the **Neo4j AuraDB free tier** — detection deliberately avoids the GDS plugin (unavailable on free) so anyone can spin up an instance and run it. Full setup, API reference, and a 3-minute demo script are in the README.
+Kavach runs entirely on the **Neo4j AuraDB free tier** — detection deliberately avoids the GDS plugin (unavailable on free) so anyone can spin up an instance and run it. Full setup, API reference, and a 3-minute demo script are in the [README](https://github.com/wiz-abhi/Kavach).
+
+Built for **HACKHAZARDS '26** by [NAMESPACE](https://www.namespace.world/), on the **Neo4j AuraDB** track.
 
 **Catch the ring, not just the account.**
