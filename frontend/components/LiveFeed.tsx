@@ -38,7 +38,10 @@ export function LiveFeed({ events, connected }: { events: LiveEvent[]; connected
   return (
     <div className="rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-panel)] flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-hairline)]">
-        <h2 className="font-[family-name:var(--font-display)] text-sm font-semibold tracking-wide">
+        <h2 className="font-[family-name:var(--font-display)] text-sm font-semibold tracking-wide flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-brand)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+          </svg>
           Live Feed
         </h2>
         <span className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] font-mono">
