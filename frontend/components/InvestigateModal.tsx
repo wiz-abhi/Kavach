@@ -11,12 +11,10 @@ export function InvestigateModal({
   onClose,
   initialFrom = "ACC-402",
   initialTo = "ACC-406",
-  autoRun,
 }: {
   onClose: () => void;
   initialFrom?: string;
   initialTo?: string;
-  autoRun?: boolean;
 }) {
   const [from, setFrom] = useState(initialFrom);
   const [to, setTo] = useState(initialTo);
@@ -43,12 +41,6 @@ export function InvestigateModal({
     window.addEventListener("keydown", onEsc);
     return () => window.removeEventListener("keydown", onEsc);
   }, [onClose]);
-
-  // Demo mode: auto-trace the prefilled pair on open.
-  useEffect(() => {
-    if (autoRun) trace();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoRun]);
 
   return (
     <div

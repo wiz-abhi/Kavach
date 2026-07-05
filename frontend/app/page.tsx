@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api, type GraphData, type GraphNode, type Ring, type Stats } from "@/lib/api";
 import { useLiveFeed } from "@/lib/useLiveFeed";
 import { StatCard } from "@/components/StatCard";
@@ -66,79 +66,6 @@ export default function DashboardPage() {
     await refreshAll();
   };
 
-  // ---- Demo Mode: auto-drive the whole UI on a timer with on-screen captions ----
-  const demoRunning = useRef(false);
-  const [demoActive, setDemoActive] = useState(false);
-  const [demoCaption, setDemoCaption] = useState("");
-  const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-
-  const stopDemo = () => {
-    demoRunning.current = false;
-    setDemoActive(false);
-    setDemoCaption("");
-    setShowBenchmark(false);
-    setShowInvestigate(false);
-    setShowCopilot(false);
-    setSelectedRing(null);
-  };
-
-  const runDemo = async () => {
-    if (demoRunning.current) return;
-    demoRunning.current = true;
-    setDemoActive(true);
-    const alive = () => demoRunning.current;
-    const step = async (caption: string, ms: number) => {
-      if (!alive()) return;
-      setDemoCaption(caption);
-      await sleep(ms);
-    };
-    try {
-      setShowBenchmark(false);
-      setShowInvestigate(false);
-      setShowCopilot(false);
-      setSelectedRing(null);
-      await step("Kavach — real-time fraud ring detection. Hundreds of accounts moving through the graph, all calm.", 9000);
-      if (!alive()) return;
-      await step("Fraud rarely works alone. Let's scan the graph for coordinated rings…", 5000);
-      if (!alive()) return;
-      setDemoCaption("Running detection across the live graph…");
-      await handleDetect();
-      if (!alive()) return;
-      await step("Rings light up — verified 100% recall, zero false positives against ground truth.", 7000);
-      if (!alive()) return;
-      try {
-        const fresh = await api.rings();
-        if (fresh[0]) setSelectedRing(fresh[0]);
-      } catch {}
-      await step("Each ring shares a device and IP and transacts 60–140× denser than the network baseline.", 9000);
-      if (!alive()) return;
-      setSelectedRing(null);
-      setShowBenchmark(true);
-      await step("Why a graph database? The same fraud query in Cypher vs. SQL — identical results, one clean pattern vs. a recursive join.", 14000);
-      setShowBenchmark(false);
-      if (!alive()) return;
-      setShowInvestigate(true);
-      await step("Investigate: Neo4j shortestPath reveals a hidden identity chain between accounts that never transacted directly.", 13000);
-      setShowInvestigate(false);
-      if (!alive()) return;
-      setShowCopilot(true);
-      await step("Ask in plain English — Kavach writes and runs the Cypher for you, read-only, against the live graph.", 13000);
-      setShowCopilot(false);
-      if (!alive()) return;
-      await step("Now — inject a brand-new fraud ring into the live graph, right now…", 4500);
-      if (!alive()) return;
-      setDemoCaption("Injecting a new ring, then re-running detection…");
-      await handleInject();
-      await handleDetect();
-      if (!alive()) return;
-      await step("…and Kavach catches it in real time. New accounts, new shared device, flagged instantly.", 8000);
-      if (!alive()) return;
-      await step("Catch the ring, not just the account. Kavach — graph-native fraud detection on Neo4j AuraDB.", 9000);
-    } finally {
-      stopDemo();
-    }
-  };
-
   return (
     <main className="min-h-screen flex flex-col">
       {/* Header */}
@@ -169,17 +96,6 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={demoActive ? stopDemo : runDemo}
-            className="px-3.5 py-2 rounded-md border text-sm font-medium transition-colors"
-            style={
-              demoActive
-                ? { borderColor: "color-mix(in srgb, var(--accent-danger) 45%, transparent)", background: "var(--accent-danger-dim)", color: "var(--accent-danger)" }
-                : { borderColor: "color-mix(in srgb, var(--accent-safe) 45%, transparent)", background: "color-mix(in srgb, var(--accent-safe) 12%, transparent)", color: "var(--accent-safe)" }
-            }
-          >
-            {demoActive ? "■ Stop Demo" : "▶ Demo Mode"}
-          </button>
-          <button
             onClick={() => setShowCopilot(true)}
             className="px-3.5 py-2 rounded-md border border-[var(--accent-brand)]/40 bg-[var(--accent-brand)]/10 text-[var(--accent-brand)] text-sm font-medium hover:bg-[var(--accent-brand)]/20 transition-colors"
           >
@@ -203,25 +119,8 @@ export default function DashboardPage() {
       </header>
 
       {showBenchmark && <BenchmarkModal onClose={() => setShowBenchmark(false)} />}
-      {showInvestigate && <InvestigateModal onClose={() => setShowInvestigate(false)} autoRun={demoActive} />}
-      {showCopilot && <CopilotModal onClose={() => setShowCopilot(false)} autoRun={demoActive} />}
-
-      {demoActive && (
-        <div className="fixed bottom-0 left-0 right-0 z-[60] flex justify-center px-4 pb-6 pointer-events-none">
-          <div className="pointer-events-auto max-w-3xl w-full flex items-center gap-4 rounded-xl border border-[var(--border-hairline-strong)] bg-[var(--bg-panel)]/95 px-5 py-3.5 backdrop-blur-md shadow-2xl">
-            <span className="shrink-0 flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-[var(--accent-brand)]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-danger)] animate-pulse" /> Demo
-            </span>
-            <p className="flex-1 text-sm text-[var(--text-primary)] leading-snug">{demoCaption}</p>
-            <button
-              onClick={stopDemo}
-              className="shrink-0 text-xs font-mono uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--accent-danger)] border border-[var(--border-hairline)] rounded px-2.5 py-1 transition-colors"
-            >
-              Stop
-            </button>
-          </div>
-        </div>
-      )}
+      {showInvestigate && <InvestigateModal onClose={() => setShowInvestigate(false)} />}
+      {showCopilot && <CopilotModal onClose={() => setShowCopilot(false)} />}
 
       {error && (
         <div className="mx-6 mt-4 rounded-md border border-[var(--accent-danger)]/40 bg-[var(--accent-danger-dim)]/50 px-4 py-3 text-sm text-[var(--accent-danger)]">
