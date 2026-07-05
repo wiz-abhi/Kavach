@@ -16,7 +16,7 @@ const EXAMPLES = [
  * Analyst copilot: ask in plain English, get an answer backed by a real Cypher query
  * (text-to-Cypher via Claude when configured, rule-based fallback otherwise).
  */
-export function CopilotModal({ onClose }: { onClose: () => void }) {
+export function CopilotModal({ onClose, autoRun }: { onClose: () => void; autoRun?: boolean }) {
   const [question, setQuestion] = useState("");
   const [history, setHistory] = useState<AskResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,6 +45,12 @@ export function CopilotModal({ onClose }: { onClose: () => void }) {
     window.addEventListener("keydown", onEsc);
     return () => window.removeEventListener("keydown", onEsc);
   }, [onClose]);
+
+  // Demo mode: auto-ask a representative question on open.
+  useEffect(() => {
+    if (autoRun) send("How much money was moved inside the rings?");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRun]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
