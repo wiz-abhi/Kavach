@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { forceCollide, forceX, forceY } from "d3-force";
 import type { GraphData, GraphNode } from "@/lib/api";
 
 // react-force-graph relies on window/canvas — must be loaded client-side only.
@@ -25,23 +26,37 @@ export function GraphView({
   const [dims, setDims] = useState({ w: 0, h: 0 });
   const [hoverId, setHoverId] = useState<string | null>(null);
   const highlight = useMemo(() => new Set(highlightIds ?? []), [highlightIds]);
+  // Cache node positions so a data refresh (e.g. after detection) doesn't re-scramble the
+  // whole layout — nodes stay put and simply recolor. New nodes (injected rings) fly in.
+  const posCache = useRef<Map<string, { x: number; y: number }>>(new Map());
+  const didFit = useRef(false);
 
   // Measure the container and pass explicit pixel dimensions — react-force-graph otherwise
   // defaults to window size and overflows the panel.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      const r = entries[0].contentRect;
-      setDims({ w: Math.floor(r.width), h: Math.floor(r.height) });
-    });
+    const measure = () => {
+      const w = el.clientWidth, h = el.clientHeight;
+      if (w > 0 && h > 0) setDims((d) => (d.w === w && d.h === h ? d : { w, h }));
+    };
+    measure(); // synchronous post-paint read (container height is resolved by now)
+    const raf = requestAnimationFrame(measure); // retry next frame in case layout settles late
+    const ro = new ResizeObserver(measure);
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
   }, []);
 
   const graphData = useMemo(
     () => ({
-      nodes: data.nodes.map((n) => ({ ...n })),
+      nodes: data.nodes.map((n) => {
+        const p = posCache.current.get(n.id);
+        // seed known positions so the layout stays put across refreshes
+        return p ? { ...n, x: p.x, y: p.y, vx: 0, vy: 0 } : { ...n };
+      }),
       links: data.edges.map((e) => ({ ...e })),
     }),
     [data]
@@ -69,6 +84,21 @@ export function GraphView({
     },
     [hoverId, highlight, neighbors]
   );
+
+  // Tune the physics: a collision force declutters the dense core so nodes don't overlap,
+  // and a gentle centering pull keeps disconnected ring clusters from drifting far off-screen.
+  useEffect(() => {
+    const fg = fgRef.current;
+    if (!fg || dims.w === 0) return;
+    const charge = fg.d3Force("charge");
+    if (charge) charge.strength(-30).distanceMax(230);
+    const link = fg.d3Force("link");
+    if (link) link.distance(22).strength(0.4);
+    fg.d3Force("collide", forceCollide(6.5));
+    fg.d3Force("x", forceX(0).strength(0.055));
+    fg.d3Force("y", forceY(0).strength(0.055));
+    fg.d3ReheatSimulation();
+  }, [dims.w, dims.h, data]);
 
   // When a ring is selected, zoom the camera to just its member nodes.
   useEffect(() => {
@@ -137,15 +167,18 @@ export function GraphView({
           const px = (v: number) => v / scale;
           const dimmed = isDimmed(node.id);
           const sel = highlight.has(node.id);
+          const emph = node.flagged || node.injected || sel || node.id === hoverId;
           const color = node.flagged ? DANGER : node.injected ? WARN : BRAND;
-          const screenR = (node.flagged || node.injected ? 4.6 : 3.2) + (sel ? 2 : 0);
+          const screenR = (node.flagged || node.injected ? 5 : 3.6) + (sel ? 2 : 0);
           const r = px(screenR);
 
-          ctx.globalAlpha = dimmed ? 0.12 : 1;
+          ctx.globalAlpha = dimmed ? 0.1 : 1;
 
-          if ((node.flagged || node.injected || sel || node.id === hoverId) && !dimmed) {
+          // glow only emphasized nodes (flagged/injected/hover/selected) — keeps 400+ normal
+          // nodes cheap to paint so interaction stays smooth; rim-light gives the rest depth
+          if (emph && !dimmed) {
             ctx.shadowColor = color;
-            ctx.shadowBlur = px(sel ? 16 : 9);
+            ctx.shadowBlur = px(sel ? 18 : 12);
           }
           ctx.beginPath();
           ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
@@ -153,10 +186,16 @@ export function GraphView({
           ctx.fill();
           ctx.shadowBlur = 0;
 
-          // thin dark outline for separation
-          ctx.lineWidth = px(0.6);
-          ctx.strokeStyle = "rgba(10,13,18,0.9)";
-          ctx.stroke();
+          // bright rim-light for depth (turns flat dots into orbs)
+          if (!dimmed) {
+            ctx.lineWidth = px(0.9);
+            ctx.strokeStyle = node.flagged
+              ? "rgba(255,185,185,0.95)"
+              : node.injected
+              ? "rgba(255,220,155,0.95)"
+              : "rgba(185,205,255,0.7)";
+            ctx.stroke();
+          }
 
           if (sel && !dimmed) {
             ctx.beginPath();
@@ -185,14 +224,16 @@ export function GraphView({
           ctx.arc(node.x, node.y, (node.flagged || node.injected ? 6 : 5) / scale, 0, 2 * Math.PI);
           ctx.fill();
         }}
+        minZoom={0.4}
+        maxZoom={8}
         linkColor={(l: any) => {
           const sid = idOf(l.source), tid = idOf(l.target);
-          if (hoverId) return sid === hoverId || tid === hoverId ? "rgba(108,142,255,0.55)" : "rgba(255,255,255,0.02)";
+          if (hoverId) return sid === hoverId || tid === hoverId ? "rgba(108,142,255,0.6)" : "rgba(255,255,255,0.015)";
           const bothFlagged = l.source?.flagged && l.target?.flagged;
-          if (highlight.size) return highlight.has(sid) && highlight.has(tid) ? "rgba(255,90,95,0.4)" : "rgba(255,255,255,0.02)";
-          return bothFlagged ? "rgba(255,90,95,0.28)" : "rgba(130,150,210,0.09)";
+          if (highlight.size) return highlight.has(sid) && highlight.has(tid) ? "rgba(255,90,95,0.45)" : "rgba(255,255,255,0.02)";
+          return bothFlagged ? "rgba(255,110,115,0.35)" : "rgba(140,160,225,0.13)";
         }}
-        linkWidth={(l: any) => (l.source?.flagged && l.target?.flagged ? 1.3 : 0.5)}
+        linkWidth={(l: any) => (l.source?.flagged && l.target?.flagged ? 1.4 : 0.6)}
         linkDirectionalParticles={(l: any) =>
           l.source?.flagged && l.target?.flagged && !hoverId ? 2 : 0
         }
@@ -202,7 +243,22 @@ export function GraphView({
         onNodeClick={(n: any) => onSelectNode?.(n)}
         warmupTicks={30}
         cooldownTicks={90}
-        onEngineStop={() => fgRef.current?.zoomToFit(400, 50)}
+        onEngineTick={() => {
+          for (const n of graphData.nodes as any[]) {
+            if (n.x != null && n.y != null) posCache.current.set(n.id, { x: n.x, y: n.y });
+          }
+        }}
+        onEngineStop={() => {
+          for (const n of graphData.nodes as any[]) {
+            if (n.x != null && n.y != null) posCache.current.set(n.id, { x: n.x, y: n.y });
+          }
+          // Only auto-fit the very first settle; afterwards preserve the current view so a
+          // detection refresh recolors nodes in place instead of re-framing the camera.
+          if (!didFit.current) {
+            didFit.current = true;
+            fgRef.current?.zoomToFit(400, 50);
+          }
+        }}
       />
     </div>
   );

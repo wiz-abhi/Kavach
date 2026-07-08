@@ -67,7 +67,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col">
+    <main className="h-screen flex flex-col overflow-hidden">
       {/* Header */}
       <header className="border-b border-[var(--border-hairline)] px-6 py-3.5 flex items-center justify-between gap-4 flex-wrap bg-[var(--bg-panel)]/40 backdrop-blur-sm">
         <div className="flex items-center gap-3">
@@ -137,14 +137,14 @@ export default function DashboardPage() {
         <StatCard eyebrow="Flagged" label="Accounts in Rings" value={fmt(stats?.flaggedAccounts)} accent="danger" icon={<FlagIcon />} pulse={!!stats?.flaggedAccounts} />
       </div>
 
-      {/* Main grid */}
-      <div className="flex-1 px-6 py-5 grid grid-cols-1 lg:grid-cols-[220px_1fr_320px] gap-4 min-h-[600px]">
-        <div className="order-2 lg:order-1">
+      {/* Main grid — fixed viewport height; each panel scrolls internally */}
+      <div className="flex-1 min-h-0 px-6 py-4 grid grid-cols-1 lg:grid-cols-[240px_1fr_340px] lg:grid-rows-1 gap-4">
+        <div className="order-2 lg:order-1 min-h-0 h-64 lg:h-auto">
           <LiveFeed events={events} connected={connected} />
         </div>
 
-        <div className="order-1 lg:order-2 flex flex-col gap-4">
-          <div className="flex-1 min-h-[420px]">
+        <div className="order-1 lg:order-2 flex flex-col gap-3 min-h-0">
+          <div className="flex-1 min-h-[320px] lg:min-h-0">
             {loading ? (
               <div className="rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-panel)] h-full flex items-center justify-center text-[var(--text-muted)] text-sm">
                 Loading graph…
@@ -156,7 +156,7 @@ export default function DashboardPage() {
           {selectedNode && <NodeDetail node={selectedNode} onClose={() => setSelectedNode(null)} />}
         </div>
 
-        <div className="order-3">
+        <div className="order-3 min-h-0 h-80 lg:h-auto">
           <RingsPanel rings={rings} onSelectRing={setSelectedRing} selectedRingId={selectedRing?.id} />
         </div>
       </div>
