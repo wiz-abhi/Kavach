@@ -17,7 +17,7 @@ PUBLISHING NOTES (delete this block before posting):
 
 **▶ Live demo:** https://kavach-woad-beta.vercel.app
 **💻 Code:** https://github.com/wiz-abhi/Kavach
-**🎥 Demo video:** _(add your YouTube link)_
+**🎥 Demo video:** https://youtu.be/EZZLWpmqrS0
 
 > **TL;DR** — Traditional fraud detection scores one account at a time and misses organized *rings*. I modeled accounts, devices, IPs, phones, and transactions as a graph in **Neo4j AuraDB**, detected rings as dense infrastructure-sharing clusters with native Cypher, and got **100% recall / 0 false positives** against ground truth. Then I made the "why a graph database?" argument *provable* by running the same query in Cypher vs. SQL, live.
 

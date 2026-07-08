@@ -1,6 +1,6 @@
 # Kavach — Real-Time Fraud Ring Detection
 
-**▶ Live demo: https://kavach-woad-beta.vercel.app** &nbsp;·&nbsp; [Backend health](https://kavach-backend-saqc.onrender.com/api/health) &nbsp;·&nbsp; [Pitch deck](docs/Kavach-Pitch-Deck.pptx)
+**🎥 Demo video: https://youtu.be/EZZLWpmqrS0** &nbsp;·&nbsp; **▶ Live demo: https://kavach-woad-beta.vercel.app** &nbsp;·&nbsp; [Backend health](https://kavach-backend-saqc.onrender.com/api/health) &nbsp;·&nbsp; [Pitch deck](docs/Kavach-Pitch-Deck.pptx)
 
 > The backend runs on Render's free tier and sleeps after ~15 min idle. If the dashboard looks
 > disconnected on first load, open the [health URL](https://kavach-backend-saqc.onrender.com/api/health)
