@@ -128,6 +128,7 @@ export const api = {
     req<AskResult>("/api/ask", { method: "POST", body: JSON.stringify({ question }) }),
   account: (id: string) => req<AccountRisk>(`/api/account/${encodeURIComponent(id)}`),
   detect: () => req<DetectionResult>("/api/detect", { method: "POST" }),
+  reset: () => req<{ ok: boolean }>("/api/reset", { method: "POST" }),
   injectFraudRing: (size = 6) =>
     req<{ injected: boolean; accountIds: string[] }>("/api/inject-fraud-ring", {
       method: "POST",

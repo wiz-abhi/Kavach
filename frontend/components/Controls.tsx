@@ -5,15 +5,34 @@ import { useState } from "react";
 export function Controls({
   onDetect,
   onInject,
+  onReset,
 }: {
   onDetect: () => Promise<void>;
   onInject: () => Promise<void>;
+  onReset: () => Promise<void>;
 }) {
   const [detecting, setDetecting] = useState(false);
   const [injecting, setInjecting] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-2.5">
+      <button
+        onClick={async () => {
+          if (!window.confirm("Reset the dashboard? This clears detected rings and removes injected demo accounts.")) return;
+          setResetting(true);
+          try {
+            await onReset();
+          } finally {
+            setResetting(false);
+          }
+        }}
+        disabled={resetting}
+        title="Clear detected rings and injected demo data"
+        className="px-3.5 py-2 rounded-md border border-[var(--border-hairline-strong)] bg-[var(--bg-panel-raised)] text-[var(--text-muted)] text-sm font-medium hover:text-[var(--text-secondary)] hover:border-[var(--text-muted)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {resetting ? "Resetting…" : "Reset"}
+      </button>
       <button
         onClick={async () => {
           setInjecting(true);

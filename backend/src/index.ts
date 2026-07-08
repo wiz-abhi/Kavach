@@ -6,7 +6,7 @@ import "dotenv/config";
 
 import { detectFraudRings } from "./detection.js";
 import { injectFraudRing } from "./inject.js";
-import { getGraphData, getRings, getStats } from "./graph.js";
+import { getGraphData, getRings, getStats, resetData } from "./graph.js";
 import { runBenchmark } from "./benchmark.js";
 import { findPath } from "./path.js";
 import { loadFeedSample, nextFeedTx } from "./feed.js";
@@ -105,6 +105,18 @@ app.post("/api/detect", async (_req, res) => {
   try {
     const result = await detectFraudRings();
     broadcast({ type: "detection_complete", payload: result });
+    res.json(result);
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/reset", async (_req, res) => {
+  try {
+    const result = await resetData();
+    await loadFeedSample().catch(() => {});
+    broadcast({ type: "reset_complete" });
     res.json(result);
   } catch (err: any) {
     console.error(err);

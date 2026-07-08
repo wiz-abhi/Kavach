@@ -77,6 +77,27 @@ export async function getRings() {
   }
 }
 
+/**
+ * Reset the dashboard to a clean slate: remove detection state (Ring nodes + flags) and the
+ * injected demo accounts/infra that accumulate from "Inject Fraud Ring", restoring the base
+ * seeded dataset. Non-injected data is untouched.
+ */
+export async function resetData() {
+  const driver = getDriver();
+  const session = driver.session();
+  try {
+    await session.run(`MATCH (r:Ring) DETACH DELETE r`);
+    await session.run(`MATCH (a:Account) REMOVE a.flagged`);
+    await session.run(`MATCH (a:Account) WHERE a.injected = true DETACH DELETE a`);
+    await session.run(`MATCH (d:Device) WHERE d.id STARTS WITH 'DEV-INJ-' DETACH DELETE d`);
+    await session.run(`MATCH (ip:IPAddress) WHERE ip.id STARTS WITH 'IP-INJ-' DETACH DELETE ip`);
+    await session.run(`MATCH (p:PhoneNumber) WHERE p.id STARTS WITH 'PHONE-INJ-' DETACH DELETE p`);
+    return { ok: true };
+  } finally {
+    await session.close();
+  }
+}
+
 export async function getStats() {
   const driver = getDriver();
   const session = driver.session();

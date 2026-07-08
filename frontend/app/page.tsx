@@ -66,6 +66,13 @@ export default function DashboardPage() {
     await refreshAll();
   };
 
+  const handleReset = async () => {
+    await api.reset();
+    setSelectedRing(null);
+    setSelectedNode(null);
+    await refreshAll();
+  };
+
   return (
     <main className="h-screen flex flex-col overflow-hidden">
       {/* Header */}
@@ -114,7 +121,7 @@ export default function DashboardPage() {
             Why Graph?
           </button>
           <span className="w-px h-7 bg-[var(--border-hairline-strong)] mx-1" />
-          <Controls onDetect={handleDetect} onInject={handleInject} />
+          <Controls onDetect={handleDetect} onInject={handleInject} onReset={handleReset} />
         </div>
       </header>
 

@@ -1,16 +1,10 @@
-import { getDriver } from "./db.js";
+import { resetData } from "./graph.js";
+import { closeDriver } from "./db.js";
 
-/** Clears detection state (Ring nodes + flags) so a demo/test starts from a clean slate. */
+/** Clears detection state (Ring nodes + flags) and injected demo data for a clean-slate demo. */
 async function main() {
-  const driver = getDriver();
-  const session = driver.session();
-  try {
-    await session.run(`MATCH (r:Ring) DETACH DELETE r`);
-    await session.run(`MATCH (a:Account) REMOVE a.flagged`);
-    console.log("Reset: removed all Ring nodes and cleared account flags.");
-  } finally {
-    await session.close();
-    await driver.close();
-  }
+  await resetData();
+  console.log("Reset: removed Ring nodes, cleared account flags, and deleted injected demo data.");
+  await closeDriver();
 }
 main();
