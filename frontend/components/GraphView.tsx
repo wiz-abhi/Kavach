@@ -29,7 +29,9 @@ export function GraphView({
   // Cache node positions so a data refresh (e.g. after detection) doesn't re-scramble the
   // whole layout — nodes stay put and simply recolor. New nodes (injected rings) fly in.
   const posCache = useRef<Map<string, { x: number; y: number }>>(new Map());
-  const didFit = useRef(false);
+  // Auto-fit the camera on each settle until the user takes control (pan/zoom/drag),
+  // so drifting clusters never end up clipped at the frame edge.
+  const userMoved = useRef(false);
 
   // Measure the container and pass explicit pixel dimensions — react-force-graph otherwise
   // defaults to window size and overflows the panel.
@@ -91,12 +93,14 @@ export function GraphView({
     const fg = fgRef.current;
     if (!fg || dims.w === 0) return;
     const charge = fg.d3Force("charge");
-    if (charge) charge.strength(-30).distanceMax(230);
+    if (charge) charge.strength(-26).distanceMax(180);
     const link = fg.d3Force("link");
     if (link) link.distance(22).strength(0.4);
-    fg.d3Force("collide", forceCollide(6.5));
-    fg.d3Force("x", forceX(0).strength(0.055));
-    fg.d3Force("y", forceY(0).strength(0.055));
+    fg.d3Force("collide", forceCollide(7));
+    // stronger centering so disconnected clusters (injected rings) stay near the core
+    // instead of drifting to — and past — the frame edges
+    fg.d3Force("x", forceX(0).strength(0.11));
+    fg.d3Force("y", forceY(0).strength(0.11));
     fg.d3ReheatSimulation();
   }, [dims.w, dims.h, data]);
 
@@ -119,6 +123,9 @@ export function GraphView({
   return (
     <div
       ref={containerRef}
+      onWheelCapture={() => {
+        userMoved.current = true;
+      }}
       className="rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-panel)] h-full overflow-hidden relative"
     >
       {/* ambient depth */}
@@ -139,7 +146,13 @@ export function GraphView({
 
       {/* controls */}
       <div className="absolute top-3 right-3 z-10 flex gap-1.5">
-        <ControlBtn label="Fit" onClick={() => fgRef.current?.zoomToFit(500, 60)} />
+        <ControlBtn
+          label="Fit"
+          onClick={() => {
+            userMoved.current = false;
+            fgRef.current?.zoomToFit(500, 60);
+          }}
+        />
         <ControlBtn label="Replay" onClick={() => fgRef.current?.d3ReheatSimulation()} />
       </div>
 
@@ -248,16 +261,16 @@ export function GraphView({
             if (n.x != null && n.y != null) posCache.current.set(n.id, { x: n.x, y: n.y });
           }
         }}
+        onNodeDrag={() => {
+          userMoved.current = true;
+        }}
         onEngineStop={() => {
           for (const n of graphData.nodes as any[]) {
             if (n.x != null && n.y != null) posCache.current.set(n.id, { x: n.x, y: n.y });
           }
-          // Only auto-fit the very first settle; afterwards preserve the current view so a
-          // detection refresh recolors nodes in place instead of re-framing the camera.
-          if (!didFit.current) {
-            didFit.current = true;
-            fgRef.current?.zoomToFit(400, 50);
-          }
+          // Keep everything framed on each settle — but stop once the user has taken
+          // control of the camera, so we don't yank their view.
+          if (!userMoved.current) fgRef.current?.zoomToFit(500, 60);
         }}
       />
     </div>
