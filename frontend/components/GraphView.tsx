@@ -12,6 +12,28 @@ const DANGER = "#ff5a5f";
 const WARN = "#f5a623";
 const BRAND = "#6c8eff";
 
+// Hard-clamp every node within a disk of the given radius around the origin, so disconnected
+// clusters can never be flung far off-frame — the whole graph stays a compact, centered blob.
+function boundingForce(radius: number) {
+  let nodes: any[] = [];
+  const force = () => {
+    for (const n of nodes) {
+      const d = Math.hypot(n.x ?? 0, n.y ?? 0);
+      if (d > radius) {
+        const k = radius / d;
+        n.x *= k;
+        n.y *= k;
+        n.vx = (n.vx ?? 0) * 0.4;
+        n.vy = (n.vy ?? 0) * 0.4;
+      }
+    }
+  };
+  (force as any).initialize = (n: any[]) => {
+    nodes = n;
+  };
+  return force;
+}
+
 export function GraphView({
   data,
   onSelectNode,
@@ -97,12 +119,25 @@ export function GraphView({
     const link = fg.d3Force("link");
     if (link) link.distance(22).strength(0.4);
     fg.d3Force("collide", forceCollide(7));
-    // stronger centering so disconnected clusters (injected rings) stay near the core
-    // instead of drifting to — and past — the frame edges
-    fg.d3Force("x", forceX(0).strength(0.11));
-    fg.d3Force("y", forceY(0).strength(0.11));
+    fg.d3Force("x", forceX(0).strength(0.045));
+    fg.d3Force("y", forceY(0).strength(0.045));
+    // hard containment: nothing can drift beyond this radius, so the fit stays compact
+    fg.d3Force("bound", boundingForce(240));
     fg.d3ReheatSimulation();
   }, [dims.w, dims.h, data]);
+
+  // The simulation can "stop" before disconnected clusters finish drifting into place, so a
+  // single fit-on-settle sometimes leaves them out of frame (only corrected by a resize).
+  // Re-fit a few times as the layout converges after load / data change — until the user
+  // takes control of the camera.
+  useEffect(() => {
+    if (userMoved.current) return;
+    const fit = () => {
+      if (!userMoved.current) fgRef.current?.zoomToFit(500, 60);
+    };
+    const timers = [500, 1400, 2800, 4500].map((ms) => setTimeout(fit, ms));
+    return () => timers.forEach(clearTimeout);
+  }, [data, dims.w, dims.h]);
 
   // When a ring is selected, zoom the camera to just its member nodes.
   useEffect(() => {
