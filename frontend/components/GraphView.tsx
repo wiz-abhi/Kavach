@@ -11,6 +11,9 @@ const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), { ssr: false 
 const DANGER = "#ff5a5f";
 const WARN = "#f5a623";
 const BRAND = "#6c8eff";
+// Nodes are hard-clamped within this radius (graph units); the camera zoom is set so this
+// radius exactly fills the frame — so nodes physically cannot leave the viewport.
+const BOUND_R = 210;
 
 // Hard-clamp every node within a disk of the given radius around the origin, so disconnected
 // clusters can never be flung far off-frame — the whole graph stays a compact, centered blob.
@@ -48,11 +51,10 @@ export function GraphView({
   const [dims, setDims] = useState({ w: 0, h: 0 });
   const [hoverId, setHoverId] = useState<string | null>(null);
   const highlight = useMemo(() => new Set(highlightIds ?? []), [highlightIds]);
-  // Cache node positions so a data refresh (e.g. after detection) doesn't re-scramble the
-  // whole layout — nodes stay put and simply recolor. New nodes (injected rings) fly in.
+  // Cache node positions (in-memory, this session only) so a data refresh (e.g. after
+  // detection) doesn't re-scramble the layout — nodes stay put and simply recolor.
   const posCache = useRef<Map<string, { x: number; y: number }>>(new Map());
-  // Auto-fit the camera on each settle until the user takes control (pan/zoom/drag),
-  // so drifting clusters never end up clipped at the frame edge.
+  // Once the user pans/zooms/drags we stop re-applying the fixed camera frame.
   const userMoved = useRef(false);
 
   // Measure the container and pass explicit pixel dimensions — react-force-graph otherwise
@@ -119,27 +121,39 @@ export function GraphView({
     const link = fg.d3Force("link");
     if (link) link.distance(22).strength(0.4);
     fg.d3Force("collide", forceCollide(7));
-    fg.d3Force("x", forceX(0).strength(0.045));
-    fg.d3Force("y", forceY(0).strength(0.045));
-    // hard containment: nothing can drift beyond this radius, so the fit stays compact
-    fg.d3Force("bound", boundingForce(240));
+    fg.d3Force("x", forceX(0).strength(0.05));
+    fg.d3Force("y", forceY(0).strength(0.05));
+    // hard containment: nothing can leave this radius
+    fg.d3Force("bound", boundingForce(BOUND_R));
     fg.d3ReheatSimulation();
   }, [dims.w, dims.h, data]);
 
-  // The simulation can "stop" before disconnected clusters finish drifting into place, so a
-  // single fit-on-settle sometimes leaves them out of frame (only corrected by a resize).
-  // Re-fit a few times as the layout converges after load / data change — until the user
-  // takes control of the camera.
-  useEffect(() => {
-    if (userMoved.current) return;
-    const fit = () => {
-      if (!userMoved.current) fgRef.current?.zoomToFit(500, 60);
-    };
-    const timers = [500, 1400, 2800, 4500].map((ms) => setTimeout(fit, ms));
-    return () => timers.forEach(clearTimeout);
-  }, [data, dims.w, dims.h]);
+  // Fixed frame: center on the origin (where the centering forces hold the mass) and set a
+  // zoom where the bounding radius exactly fills the viewport. Because nodes are hard-clamped
+  // within BOUND_R, this frame always contains the entire graph — no content-based fitting,
+  // no per-load layout lottery, no persisted state. Re-applied on resize/data change until
+  // the user takes control of the camera.
+  const applyFixedFrame = useCallback(
+    (ms = 400) => {
+      const fg = fgRef.current;
+      if (!fg || dims.w === 0) return;
+      const pad = 28;
+      const k = Math.min(dims.w, dims.h) / (2 * (BOUND_R + pad));
+      fg.centerAt(0, 0, ms);
+      fg.zoom(k, ms);
+    },
+    [dims.w, dims.h]
+  );
 
-  // When a ring is selected, zoom the camera to just its member nodes.
+  useEffect(() => {
+    if (userMoved.current || dims.w === 0) return;
+    const t = setTimeout(() => {
+      if (!userMoved.current) applyFixedFrame(0);
+    }, 150);
+    return () => clearTimeout(t);
+  }, [data, dims.w, dims.h, applyFixedFrame]);
+
+  // When a ring is selected, zoom to just its members; when deselected, return to the frame.
   useEffect(() => {
     if (highlight.size > 0 && fgRef.current) {
       const t = setTimeout(() => {
@@ -151,7 +165,11 @@ export function GraphView({
       }, 120);
       return () => clearTimeout(t);
     }
-  }, [highlight]);
+    if (highlight.size === 0 && !userMoved.current) {
+      const t = setTimeout(() => applyFixedFrame(400), 60);
+      return () => clearTimeout(t);
+    }
+  }, [highlight, applyFixedFrame]);
 
   const idOf = (end: any) => (typeof end === "object" ? end.id : end);
 
@@ -185,7 +203,7 @@ export function GraphView({
           label="Fit"
           onClick={() => {
             userMoved.current = false;
-            fgRef.current?.zoomToFit(500, 60);
+            applyFixedFrame(400);
           }}
         />
         <ControlBtn label="Replay" onClick={() => fgRef.current?.d3ReheatSimulation()} />
@@ -303,9 +321,7 @@ export function GraphView({
           for (const n of graphData.nodes as any[]) {
             if (n.x != null && n.y != null) posCache.current.set(n.id, { x: n.x, y: n.y });
           }
-          // Keep everything framed on each settle — but stop once the user has taken
-          // control of the camera, so we don't yank their view.
-          if (!userMoved.current) fgRef.current?.zoomToFit(500, 60);
+          if (!userMoved.current) applyFixedFrame(0);
         }}
       />
     </div>
